@@ -1,0 +1,60 @@
+#!/usr/bin/env php
+<?php
+require 'vendor' . DIRECTORY_SEPARATOR . 'autoload.php';
+
+use Monohook\Monohook;
+use Monohook\Handler\StdoutHandler;
+use Monohook\Processor\LintProcessor;
+use Monohook\Processor\CodeSnifferProcessor;
+use Monohook\Processor\PHPUnitProcessor;
+use Monohook\Processor\RebaseProcessor;
+use Monohook\Provider\GitProvider;
+
+/*
+    Instantiate the Handler instance.
+ */
+$Handler = new StdoutHandler();
+
+/*
+    Configure the Monohook instance.
+ */
+$Monohook = new Monohook(new GitProvider(), array(
+    'pre-commit' => array(
+        /*
+            Run existing tests for PHP files in `src/`.
+         */
+        new PHPUnitProcessor($Handler, array('paths' => ['src', 'tests'])),
+        /*
+            Run code sniffer on PHP all PHP files except the ones in `vendor/`.
+         */
+        new CodeSnifferProcessor($Handler, array('executables' => array('php' => 'phpcs -s --ignore=vendor/'))),
+        /*
+            Run syntax check on all PHP files.
+         */
+        new LintProcessor($Handler, array('extensions' => 'php')),
+    ),
+    'post-commit' => array(
+        /*
+            Callback example to play a sound.
+         */
+        function ($Provider) {
+            $cmd = 'play';
+            $file = implode(DIRECTORY_SEPARATOR, array('assets', 'success', 'happykids.wav'));
+            if (exec('uname') == 'Darwin') {
+                $cmd = 'afplay';
+            }
+            exec(sprintf('%s %s > /dev/null 2>&1 &', $cmd, $file), $output, $return);
+        },
+    ),
+    'pre-rebase' => array(
+        /*
+            Make sure you can rebase safely.
+         */
+        new RebaseProcessor($Handler),
+    ),
+));
+
+/*
+    Run.
+ */
+exit($Monohook->run());
