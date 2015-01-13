@@ -144,6 +144,10 @@ abstract class AbstractProvider implements ProviderInterface
 
         # Copy files to tmp
         foreach ($this->getAllFiles() as $file) {
+            if (is_link($file)) {
+                continue;
+            }
+
             $dir = dirname($file);
             if ('.' == $dir) {
                 $dir = '';
